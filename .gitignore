@@ -1,0 +1,14 @@
+.dub
+docs.json
+__dummy.html
+docs/
+putnamlibraries.so
+putnamlibraries.dylib
+putnamlibraries.dll
+putnamlibraries.a
+putnamlibraries.lib
+putnamlibraries-test-*
+*.exe
+*.o
+*.obj
+*.lst
