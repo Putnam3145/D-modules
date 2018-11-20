@@ -379,7 +379,7 @@ if (isFloatingPoint!T)
             }
         }
     }
-    ///Makes the quaternion its normed counterpart.
+    ///Makes the quaternion its unit counterpart.
     ref Quaternion setToNorm()
     {
         return this/=this.norm;
@@ -522,7 +522,7 @@ do
 @safe pure nothrow unittest
 {
     auto q = quaternion(0.5,0.5,0.5,0.5);
-    auto p = quaternion(0,1,1,1).normed;
+    auto p = quaternion(0,1,1,1).unit;
     assert(q.conjugate==quaternion(0.5,-0.5,-0.5,-0.5));
     enum SQRT1_3 = std.math.sqrt(1.0/3);
     assert(conjugate(p,q)==quaternion(0,SQRT1_3,SQRT1_3,SQRT1_3));
@@ -539,7 +539,7 @@ pure nothrow Quaternion!T log(T)(Quaternion!T q)
       but I do remember that std.math.log returns a real and the error had to do with no implicit conversion between Quaternion!real
       and Quaternion!double. Either way, the cast is actually necessary.
     */
-    return cast(T)std.math.log(q.norm)+q.vector.normed*acos(q.re/q.norm); 
+    return cast(T)std.math.log(q.norm)+q.vector.unit*acos(q.re/q.norm); 
 }
 
 /**
@@ -549,13 +549,13 @@ pure nothrow Quaternion!T log(T)(Quaternion!T q)
 pure nothrow Quaternion!T exp(T)(Quaternion!T q)
 {
     const T vectorNorm=q.vector.norm;
-    return std.math.exp(q.re)*(cos(vectorNorm)+q.vector.normed*sin(vectorNorm));
+    return std.math.exp(q.re)*(cos(vectorNorm)+q.vector.unit*sin(vectorNorm));
 }
 /**
     Params: q = A quaternion.
     Returns: A quaternion with the same argument but norm of zero.
 */
-Quaternion!T normed(T)(Quaternion!T q)
+Quaternion!T unit(T)(Quaternion!T q)
 {
     if(q==0)
     {
@@ -567,7 +567,7 @@ Quaternion!T normed(T)(Quaternion!T q)
 ///
 @safe pure nothrow unittest
 {
-    assert(quaternion(0,2,1,0).normed.norm==1);
+    assert(quaternion(0,2,1,0).unit.norm==1);
 }
 @safe pure nothrow unittest
 {
@@ -612,6 +612,6 @@ Quaternion!T normed(T)(Quaternion!T q)
     assert(q^^2==q*q);
     assert(q^^5==q*q*q*q*q);
     assert(q.conjugate==quaternion(0.5,-2,-2,-0.5));
-    assert(q.normed.conjugate==1/q.normed);
+    assert(q.unit.conjugate==1/q.unit);
     assert(i^^0.5==complex(0,1)^^0.5);
 }
