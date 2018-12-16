@@ -201,7 +201,7 @@ if(isFloatingPoint!T && depth>=1)
 		}
 		else static if (op == "/")
 		{
-            assert(0,"cayley-dickson construction doesn't necessarily create a division algebra!");
+            assert(0,"cayley-dickson construction doesn't necessarily create a division algebra!"); //todo: make depths 2, 1 work
 		}
     }
     ref CayleyDickson opOpAssign(string op, R)(const R z)
