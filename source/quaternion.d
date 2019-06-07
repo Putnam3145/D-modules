@@ -280,7 +280,7 @@ if (isFloatingPoint!T)
 	Quaternion!(CommonType!(T, R)) opBinaryRight(string op, R)(const R r) const //all the stuff with real numbers
 	if (isNumeric!R)
 	{
-		static if (op == "+" || op == "*") //since we're multiplying with a real there's no rotation, so we can treat multiplication as associative
+		static if (op == "+" || op == "*") //since we're multiplying with a real there's no rotation, so we can treat multiplication as commutative
 		{
 			return opBinary!(op)(r);
 		}
