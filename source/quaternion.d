@@ -258,7 +258,7 @@ if (isFloatingPoint!T)
 
 	//OPERATORS
 
-	Quaternion opUnary(string op)()
+	Quaternion opUnary(string op)() const
 	{
 		static if(op == "+") { return this; }
 		else static if(op == "-") { return Quaternion(-re,-i,-j,-k); }
@@ -296,6 +296,11 @@ if (isFloatingPoint!T)
             auto denominator = (re*re+i*i+j*j+k*k);
             return(Q((re*r)/denominator,(-i*r)/denominator,(-j*r)/denominator,(-k*r)/denominator));
 		}
+        else static if (op == "^^")
+        {
+            const auto adjustedNorm = this.vector.norm*std.math.log(r);
+            return std.math.pow(r,re)*(cos(adjustedNorm)+q.vector.unit*sin(adjustedNorm));
+        }
 	}
     //OP-ASSIGN
     ref Quaternion opOpAssign(string op, Q)(const Q q)
@@ -528,6 +533,11 @@ do
     assert(conjugate(p,q)==quaternion(0,SQRT1_3,SQRT1_3,SQRT1_3));
 }
 
+pure nothrow T angle(T)(inout Quaternion!T q)
+{
+    return acos(q.re/q.norm);
+}
+
 /**
     Params:
      q = A quaternion.
@@ -539,7 +549,7 @@ pure nothrow Quaternion!T log(T)(Quaternion!T q)
       but I do remember that std.math.log returns a real and the error had to do with no implicit conversion between Quaternion!real
       and Quaternion!double. Either way, the cast is actually necessary.
     */
-    return cast(T)std.math.log(q.norm)+q.vector.unit*acos(q.re/q.norm); 
+    return cast(T)std.math.log(q.norm)+q.vector.unit*q.angle; 
 }
 
 /**
@@ -553,7 +563,7 @@ pure nothrow Quaternion!T exp(T)(Quaternion!T q)
 }
 /**
     Params: q = A quaternion.
-    Returns: A quaternion with the same argument but norm of zero.
+    Returns: A quaternion with the same argument but norm of one.
 */
 Quaternion!T unit(T)(Quaternion!T q)
 {
@@ -567,18 +577,18 @@ Quaternion!T unit(T)(Quaternion!T q)
 ///
 @safe pure nothrow unittest
 {
-    assert(quaternion(0,2,1,0).unit.norm==1);
+    assert(quaternion(0,2,1,0).unit.norm.approxEqual(1.0));
 }
-@safe pure nothrow unittest
+unittest
 {
     import quaternions;
     import std.math,std.complex;
     enum EPS = double.epsilon;
-    auto p = quaternion(0,1.0,1.0,1.0);
-    auto q = Quaternion!double(0.5,2.0,2.0,0.5);
-    auto i = quaternion(0,1,0,0);
-    auto j = quaternion(0,0,1,0);
-    auto k = quaternion(0,0,0,1);
+    const auto p = quaternion(0,1.0,1.0,1.0);
+    const auto q = Quaternion!double(0.5,2.0,2.0,0.5);
+    const auto i = quaternion(0,1,0,0);
+    const auto j = quaternion(0,0,1,0);
+    const auto k = quaternion(0,0,0,1);
     assert(p == +p);
     assert((-q).re == -(q.re));
     assert((-q).i == -(q.i));
@@ -590,18 +600,18 @@ Quaternion!T unit(T)(Quaternion!T q)
     assert(k*k==-1);
     assert(i*j*k==-1);
     assert(k*k*k==-k);
-    auto ppq = p+q;
+    const auto ppq = p+q;
     assert(ppq.re==p.re+q.re);
     assert(ppq.i==p.i+q.i);
     assert(ppq.j==p.j+q.j);
     assert(ppq.k==p.k+q.k);
-    auto pmq = p-q;
+    const auto pmq = p-q;
     assert(pmq.re==p.re-q.re);
     assert(pmq.i==p.i-q.i);
     assert(pmq.j==p.j-q.j);
     assert(pmq.k==p.k-q.k);
-    auto ptq = p*q;
-    auto qtp = q*p;
+    const auto ptq = p*q;
+    const auto qtp = q*p;
     assert(qtp==quaternion(-4.5,2.0,-1.0,0.5));
     assert(ptq!=qtp);
     assert(q^^-1==1/q);
@@ -614,4 +624,6 @@ Quaternion!T unit(T)(Quaternion!T q)
     assert(q.conjugate==quaternion(0.5,-2,-2,-0.5));
     assert(q.unit.conjugate==1/q.unit);
     assert(i^^0.5==complex(0,1)^^0.5);
+    const auto angleTest = quaternion(2.0,1.0,-2.0,5.0);
+    import std.stdio : writeln;
 }
