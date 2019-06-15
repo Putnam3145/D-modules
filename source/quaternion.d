@@ -624,6 +624,4 @@ unittest
     assert(q.conjugate==quaternion(0.5,-2,-2,-0.5));
     assert(q.unit.conjugate==1/q.unit);
     assert(i^^0.5==complex(0,1)^^0.5);
-    const auto angleTest = quaternion(2.0,1.0,-2.0,5.0);
-    import std.stdio : writeln;
 }
