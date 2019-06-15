@@ -208,6 +208,10 @@ if (isFloatingPoint!T)
 		j=0;
 		k=0;
 	}
+    this(R : T)(const R z,const Quaternion!R n,const R theta) // polar form
+    {
+        this = z*exp(n.vector.norm*theta);
+    }
 
 	// ASSIGNMENT
 
@@ -427,9 +431,9 @@ if (is(T R == Quaternion!R))
 }
 
 ///The quaternion with its scalar part stripped out.
-pure nothrow Quaternion!T vector(T)(Quaternion!T q)
+pure nothrow Quaternion!T vector(T)(const Quaternion!T q)
 {
-    return quaternion(0,q.i,q.j,q.k);
+    return Quaternion!(T)(0,q.i,q.j,q.k);
 }
 
 ///
@@ -439,7 +443,7 @@ pure nothrow Quaternion!T vector(T)(Quaternion!T q)
 }
 
 ///The scalar part of the quaternion.
-@safe pure nothrow T scalar(T)(Quaternion!T q)
+@safe pure nothrow T scalar(T)(const Quaternion!T q)
 {
     return q.re;
 }
@@ -454,7 +458,7 @@ pure nothrow Quaternion!T vector(T)(Quaternion!T q)
     Params: q = A quaternion.
     Returns: the norm of `q`.
 */
-T norm(T)(Quaternion!T q)
+T norm(T)(const Quaternion!T q)
 {
     return sqrt(sqNorm(q));
 }
@@ -471,7 +475,7 @@ T norm(T)(Quaternion!T q)
     Params: q = A quaternion.
     Returns: The squared norm of `q`.
 */
-T sqNorm(T)(Quaternion!T q)
+T sqNorm(T)(const Quaternion!T q)
 {
     return (q*q.conjugate).re;
 }
@@ -486,7 +490,7 @@ T sqNorm(T)(Quaternion!T q)
     Params: q = A quaternion.
     Returns: whether `q` is a unit quaternion.
 */
-bool isUnitQuaternion(T)(Quaternion!T q)
+bool isUnitQuaternion(T)(const Quaternion!T q)
 {
     return approxEqual(q.sqNorm,1,T.epsilon);
 }
@@ -507,13 +511,13 @@ bool isUnitQuaternion(T)(Quaternion!T q)
     Returns: p conjugated with q.
     If only one quaternion is given, it will simply return that quaternion's conjugate.
 */
-Quaternion!T conjugate(T)(Quaternion!T p)
+Quaternion!T conjugate(T)(const Quaternion!T p)
 {
     return Quaternion!T(p.re,-p.i,-p.j,-p.k);
 }
 
 ///ditto
-Quaternion!(CommonType!(R,T)) conjugate(R,T)(Quaternion!R p, Quaternion!T q)
+Quaternion!(CommonType!(R,T)) conjugate(R,T)(const Quaternion!R p, const Quaternion!T q)
 in
 {
     assert(q.norm==1,`q must be a unit quaternion!`);
@@ -533,7 +537,7 @@ do
     assert(conjugate(p,q)==quaternion(0,SQRT1_3,SQRT1_3,SQRT1_3));
 }
 
-pure nothrow T angle(T)(inout Quaternion!T q)
+pure nothrow T angle(T)(const Quaternion!T q)
 {
     return acos(q.re/q.norm);
 }
@@ -543,7 +547,7 @@ pure nothrow T angle(T)(inout Quaternion!T q)
      q = A quaternion.
     Returns: The natural logarithm of q.
 */
-pure nothrow Quaternion!T log(T)(Quaternion!T q)
+pure nothrow Quaternion!T log(T)(const Quaternion!T q)
 {
     /*   Gives me an error if I don't cast here. I don't actually recall the error, since I'm writing this comment after the fact,
       but I do remember that std.math.log returns a real and the error had to do with no implicit conversion between Quaternion!real
@@ -552,20 +556,25 @@ pure nothrow Quaternion!T log(T)(Quaternion!T q)
     return cast(T)std.math.log(q.norm)+q.vector.unit*q.angle; 
 }
 
+pure nothrow Quaternion!T vectorUnit(T)(const Quaternion!T q)
+{
+    return q.vector.unit;
+}
+
 /**
     Params: q = A quaternion.
     Returns: The exponential function of q.
 */
-pure nothrow Quaternion!T exp(T)(Quaternion!T q)
+pure nothrow Quaternion!T exp(T)(const Quaternion!T q)
 {
-    const T vectorNorm=q.vector.norm;
-    return std.math.exp(q.re)*(cos(vectorNorm)+q.vector.unit*sin(vectorNorm));
+    const auto vectorNorm = q.vector.norm;
+    return std.math.exp(q.re)*(cos(vectorNorm)+q.vectorUnit*sin(vectorNorm));
 }
 /**
     Params: q = A quaternion.
     Returns: A quaternion with the same argument but norm of one.
 */
-Quaternion!T unit(T)(Quaternion!T q)
+Quaternion!T unit(T)(const Quaternion!T q)
 {
     if(q==0)
     {
