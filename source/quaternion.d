@@ -295,10 +295,8 @@ if (isFloatingPoint!T)
 		}
 		else static if (op == "/")
 		{
-            alias Q = typeof(return);
 			//now i can finally stop plagiarizing phobos
-            auto denominator = (re*re+i*i+j*j+k*k);
-            return(Q((re*r)/denominator,(-i*r)/denominator,(-j*r)/denominator,(-k*r)/denominator));
+            return this.conjugate/this.sqNorm;
 		}
         else static if (op == "^^")
         {
@@ -320,7 +318,7 @@ if (isFloatingPoint!T)
         }
         else static if (op == "*")
         {
-            auto p=this;
+            const auto p=this;
             re=(q.re*p.re)-(q.i*p.i)-(q.j*p.j)-(q.k*p.k);
             i=(q.re*p.i)+(q.i*p.re)-(q.j*p.k)+(q.k*p.j);
             j=(q.re*p.j)+(q.i*p.k)+(q.j*p.re)-(q.k*p.i);
@@ -329,8 +327,8 @@ if (isFloatingPoint!T)
         }
         else static if (op == "/")
         {
-            auto denominator = (q.re*q.re+q.i*q.i+q.j*q.j+q.k*q.k);
-            auto p=this;
+            const auto denominator = (q.re*q.re+q.i*q.i+q.j*q.j+q.k*q.k);
+            const auto p=this;
             re=((q.re*p.re)+(q.i*p.i)+(q.j*p.j)+(q.k*p.k))/denominator;
             i=((q.re*p.i)-(q.i*p.re)-(q.j*p.k)+(q.k*p.j))/denominator;
             j=((q.re*p.j)+(q.i*p.k)-(q.j*p.re)-(q.k*p.i))/denominator;
@@ -477,7 +475,7 @@ T norm(T)(const Quaternion!T q)
 */
 T sqNorm(T)(const Quaternion!T q)
 {
-    return (q*q.conjugate).re;
+    return q.re*q.re+q.i*q.i+q.j*q.j+q.k*q.k;
 }
 ///
 @safe pure nothrow unittest
@@ -633,4 +631,11 @@ unittest
     assert(q.conjugate==quaternion(0.5,-2,-2,-0.5));
     assert(q.unit.conjugate==1/q.unit);
     assert(i^^0.5==complex(0,1)^^0.5);
+    //making sure that the infinite square roots of -1 hold
+    import std.random : uniform01;
+    foreach(int _;0..100)
+    {
+        const auto sqrtNegOne = quaternion(0,uniform01,uniform01,uniform01).unit;
+        assert(sqrtNegOne*sqrtNegOne==-1.0,"A square root of negative one isn't a square root of negative one!");
+    }
 }
