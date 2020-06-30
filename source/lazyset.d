@@ -18,6 +18,7 @@ shared struct LazySet(T)
     /// You can set the value directly, as normal--this throws away the current task.
     void opAssign(T n)
     {
+        import core.atomic : atomicStore;
         working = false;
         atomicStore(_val,n);
     }
