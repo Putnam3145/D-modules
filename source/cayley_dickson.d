@@ -137,7 +137,7 @@ if(isFloatingPoint!T && depth>=1)
     this(R : T)(R[] scalars ...)
     {
         const maxSize=2^^depth+1;
-        foreach(uint idx,T scalar;scalars)
+        foreach(size_t idx,T scalar;scalars)
         {
             if(idx>maxSize) 
                 break;
@@ -349,6 +349,8 @@ if(isFloatingPoint!T && depth>=1)
 }
 unittest
 {
+    import std.stdio : writeln;
+    writeln("Cayley-Dickson testing.");
     auto im=CayleyDickson!(double)(0.0,1.0);
     assert(isCayleyDickson!(typeof(im)));
     alias ComplexC = CayleyDickson!(double);
@@ -369,6 +371,7 @@ unittest
     writeln("Sedenion squared: ",s^^2);
     assert(s^^2==-1);
     assert(im^^2==-1,text(im,' ',im^^2));
+    writeln("Finished.");
 }
 
 pure nothrow CayleyDickson!(T,depth) exp(T,uint depth)(CayleyDickson!(T,depth) z,int precision=-1)

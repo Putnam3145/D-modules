@@ -7,6 +7,13 @@
 
 module quaternions;
 
+unittest
+{
+    import std.stdio : writeln;
+    writeln("Quaternion testing.");
+}
+
+
 import std.traits,std.complex,std.math;
 
 /** Helper function that returns a quaternion with the specified
@@ -245,16 +252,16 @@ if (isFloatingPoint!T)
     bool opEquals(R : T)(Quaternion!R q) const
     {
         const auto EPS=CommonType!(T,R).epsilon;
+        //has to be approxEqual becase errors build up a lot with rotation and things
         return re.approxEqual(q.re,EPS) && i.approxEqual(q.i,EPS) && j.approxEqual(q.j,EPS) && k.approxEqual(q.k,EPS);
     }
-
+    //Can compare to complex numbers
     bool opEquals(R : T)(Complex!R z) const
     {
         const auto EPS=CommonType!(T,R).epsilon;
         return re.approxEqual(z.re,EPS) && i.approxEqual(z.im,EPS) && j == 0 && k == 0;
     }
-
-    // this == numeric
+    //And of course real numbers
     bool opEquals(R : T)(const R r) const
     {
         return re.approxEqual(r,CommonType!(T,R).epsilon) && i == 0 && j == 0 && k == 0;
@@ -267,7 +274,6 @@ if (isFloatingPoint!T)
 		static if(op == "+") { return this; }
 		else static if(op == "-") { return Quaternion(-re,-i,-j,-k); }
 	}
-
     Quaternion!(CommonType!(T,R)) opBinary(string op, R)(Quaternion!R q) const
     {
         alias Q = typeof(return);
@@ -586,6 +592,7 @@ Quaternion!T unit(T)(const Quaternion!T q)
 {
     assert(quaternion(0,2,1,0).unit.norm.approxEqual(1.0));
 }
+
 unittest
 {
     import quaternions;
@@ -638,4 +645,10 @@ unittest
         const auto sqrtNegOne = quaternion(0,uniform01,uniform01,uniform01).unit;
         assert(sqrtNegOne*sqrtNegOne==-1.0,"A square root of negative one isn't a square root of negative one!");
     }
+}
+
+unittest
+{
+    import std.stdio : writeln;
+    writeln("Finished.");
 }
