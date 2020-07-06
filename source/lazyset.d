@@ -1,67 +1,68 @@
 module lazyset;
 
 /** 
-    Provides a transparent wrapper that allows for lazy
-    setting of variables. When lazySet!!func(args) is called
+    Provides a wrapper that allows for lazy, threaded
+    setting of variables. When lazySet!func(args) is called
     on the value, the function will be called in a new thread;
-    as soon as the value's access is attempted, it'll return the
-    result of the task, blocking if it's not done calculating.
+    if the value is accessed before the thread is done, it'll block
+    until the thread is finished.
 
     Accessing the value is as simple as using it like the
     type it's templated for--see the unit test.
 */
-shared struct LazySet(T)
+struct LazySet(T)
 {
 
     alias val this;
 
-    /// You can set the value directly, as normal--this throws away the current task.
+    /// You can set the value directly, as normal--this will prevent the thread from modifying the value.
     pure @safe @nogc void opAssign(T n)
     {
         import core.atomic : atomicStore;
-        // we use curTask being null as a way to tell if a task is running.
-        // it feels kinda like abuse, but it's allowed and (technically) safe, so this we do.
-        curTask = null;
+        thread = null; // this'll keep the thread going, technically, but the main thread will never stop to wait for it
         atomicStore(_val,n);
     }
 
     import std.traits : ReturnType;
 /** 
     Called the same way as std.parallelism.task;
-    after this is called, the next attempt to access
-    the value will result in the value being set from
-    the result of the given function before it's returned.
-    If the task isn't done, it'll wait on the task to be done
-    once accessed, using workForce.
+    after this is called, it'll set the value ASAP.
+    If one attempts to access the value before
+    the function is done, it'll wait until the function is done anyway.
 */
-    @safe void lazySet(alias func,Args...)(Args args) // not pure because taskPool isn't; not nogc because task!func isn't
+    void lazySet(alias func,Args...)(Args args)
         if(is(ReturnType!func == T))
     {
-        import std.parallelism : task,taskPool;
-        auto t = task!func(args);
-        taskPool.put(t);
-        curTask = (() => t.workForce);
+        import core.thread : Thread;
+        import core.atomic : atomicLoad, cas;
+        thread = new Thread({
+            T prev = atomicLoad(_val);
+            T newVal = func(args);
+            cas(&_val,prev,newVal);
+        }).start();
     }
     /// ditto
-    @safe void lazySet(F,Args...)(F fpOrDelegate, ref Args args)
+    void lazySet(F,Args...)(F fpOrDelegate, ref Args args)
         if(is(ReturnType!F == T))
     {
-        import std.parallelism : task,taskPool;
-        auto t = task(fpOrDelegate,args);
-        taskPool.put(t);
-        curTask = (() => t.workForce);
+        import core.thread : Thread;
+        import core.atomic : atomicLoad, cas;
+        thread = new Thread({
+            T prev = atomicLoad(_val);
+            T newVal = fpOrDelegate(args);
+            cas(&_val,prev,newVal);
+        }).start();
     }
 
     private:
-        T _val;
-        T delegate() curTask;
+        import core.thread : Thread;
+        shared T _val;
+        Thread thread;
 
-        T val() // we can't guarantee ANY properties of curTask, so this gets none
+        T val()
         {
-            import core.atomic : cas,atomicLoad;
-            T prev = _val; // this can run in however many threads at once, which is why this is done cas-wise
-            if(curTask && cas(&_val,prev,curTask())) curTask = null;
-            return atomicLoad(_val);
+            if(thread) thread.join();
+            return _val;
         }
 }
 
@@ -76,16 +77,35 @@ unittest
     test = 500;
     assert(test == 500,test.to!string);
     // can be set using an anonymous function as the template argument, of course.
+    import std.datetime.stopwatch;
+    auto sw = StopWatch(AutoStart.yes);
     test.lazySet!({
         import std.random : uniform;
-        int i;
-        while(uniform(0,1000) != 0)
+        int i = 0;
+        while(i<100_000_000)
         {
-            i = uniform(0,100);
+            i++;
         }
         return i;
     })();
-    assert(test < 100,test.to!string);
+    writeln("Time taken to start the function: ",sw.peek);
+    sw.reset();
+    assert(test == 100_000_000,test.to!string);
+    writeln("Time taken to access the variable: ",sw.peek);
+    sw.reset();
+    test.lazySet!({
+        import std.random : uniform;
+        int i = 0;
+        while(i<100_000_000)
+        {
+            i++;
+        }
+        return i;
+    })();
+    sw.reset();
+    test = 5;
+    assert(test == 5,test.to!string);
+    writeln("Time taken to access the variable when overridden during the function: ",sw.peek);
     // you can also pass in a delegate argument
     test.lazySet(() => 40);
     assert(test == 40,test.to!string);
