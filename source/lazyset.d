@@ -16,10 +16,12 @@ shared struct LazySet(T)
     alias val this;
 
     /// You can set the value directly, as normal--this throws away the current task.
-    void opAssign(T n)
+    pure @safe @nogc void opAssign(T n)
     {
         import core.atomic : atomicStore;
-        working = false;
+        // we use curTask being null as a way to tell if a task is running.
+        // it feels kinda like abuse, but it's allowed and (technically) safe, so this we do.
+        curTask = null;
         atomicStore(_val,n);
     }
 
@@ -32,39 +34,33 @@ shared struct LazySet(T)
     If the task isn't done, it'll wait on the task to be done
     once accessed, using workForce.
 */
-    void lazySet(alias func,Args...)(Args args)
+    @safe void lazySet(alias func,Args...)(Args args) // not pure because taskPool isn't; not nogc because task!func isn't
         if(is(ReturnType!func == T))
     {
         import std.parallelism : task,taskPool;
         auto t = task!func(args);
         taskPool.put(t);
         curTask = (() => t.workForce);
-        working = true;
     }
     /// ditto
-    void lazySet(F,Args...)(F fpOrDelegate, ref Args args)
+    @safe void lazySet(F,Args...)(F fpOrDelegate, ref Args args)
         if(is(ReturnType!F == T))
     {
         import std.parallelism : task,taskPool;
         auto t = task(fpOrDelegate,args);
         taskPool.put(t);
         curTask = (() => t.workForce);
-        working = true;
     }
 
     private:
         T _val;
         T delegate() curTask;
-        bool working = false;
 
-        T val()
+        T val() // we can't guarantee ANY properties of curTask, so this gets none
         {
-            import core.atomic : atomicStore,atomicLoad;
-            if(working)
-            {
-                atomicStore(_val,curTask());
-                working = false;
-            }
+            import core.atomic : cas,atomicLoad;
+            T prev = _val; // this can run in however many threads at once, which is why this is done cas-wise
+            if(curTask && cas(&_val,prev,curTask())) curTask = null;
             return atomicLoad(_val);
         }
 }
